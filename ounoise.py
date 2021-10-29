@@ -4,7 +4,7 @@ import numpy as np
 # from https://github.com/songrotek/DDPG/blob/master/ou_noise.py
 class OUNoise:
 
-    def __init__(self, action_dimension, scale=0.1, mu=0, theta=0.15, sigma=0.2):
+    def __init__(self, action_dimension, scale=0.1, mu=0, theta=0.15, sigma=np.sqrt(0.05)):
         self.action_dimension = action_dimension
         self.scale = scale
         self.mu = mu
@@ -18,6 +18,7 @@ class OUNoise:
 
     def noise(self):
         x = self.state
-        dx = self.theta * (self.mu - x) + self.sigma * np.random.randn(len(x))
-        self.state = x + dx
-        return self.state * self.scale
+        # dx = self.theta * (self.mu - x) + self.sigma * np.random.randn(len(x))
+        # self.state = x + dx
+        # return self.state * self.scale
+        return np.sqrt(0.05)*np.random.randn(len(x))

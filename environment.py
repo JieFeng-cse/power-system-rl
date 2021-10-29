@@ -30,13 +30,13 @@ plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
 class VoltageCtrl_nonlinear(gym.Env):
     def __init__(self, pp_net, injection_bus, obs_dim=1, action_dim=1, 
-                 v0=1, vmax=1.05, vmin=0.95):
+                 v0=1, vmax=1.05, vmin=0.95): #1.05, 0.95
         
         self.network =  pp_net
         self.injection_bus = injection_bus
         self.agentnum = len(injection_bus)
-        self.action_space = spaces.Box(-200, 200, (5,), dtype=np.float32)
-        self.observation_space = spaces.Box(-400.0, 400.0, (5,), dtype=np.float32)
+        self.action_space = spaces.Box(-100, 100, (1,), dtype=np.float32)
+        self.observation_space = spaces.Box(-400.0, 400.0, (1,), dtype=np.float32)
         
         self.obs_dim = obs_dim
         self.action_dim = action_dim
@@ -56,9 +56,17 @@ class VoltageCtrl_nonlinear(gym.Env):
         
         done = False 
         
-        reward = float(-10*LA.norm(action)**2 -100*LA.norm(np.clip(self.state-self.vmax, 0, np.inf))**2
-                       - 100*LA.norm(np.clip(self.vmin-self.state, 0, np.inf))**2)
-        
+        reward1 = float(-10*LA.norm(action[0])**2 -10000*LA.norm(np.clip(self.state[0]-self.vmax, 0, np.inf))**2
+                       - 10000*LA.norm(np.clip(self.vmin-self.state[0], 0, np.inf))**2)
+        reward2 = float(-10*LA.norm(action[1])**2 -10000*LA.norm(np.clip(self.state[1]-self.vmax, 0, np.inf))**2
+                       - 10000*LA.norm(np.clip(self.vmin-self.state[1], 0, np.inf))**2)
+        reward3 = float(-10*LA.norm(action[2])**2 -10000*LA.norm(np.clip(self.state[2]-self.vmax, 0, np.inf))**2
+                       - 10000*LA.norm(np.clip(self.vmin-self.state[2], 0, np.inf))**2)
+        reward4 = float(-10*LA.norm(action[3])**2 -10000*LA.norm(np.clip(self.state[3]-self.vmax, 0, np.inf))**2
+                       - 10000*LA.norm(np.clip(self.vmin-self.state[3], 0, np.inf))**2)
+        reward5 = float(-10*LA.norm(action[4])**2 -10000*LA.norm(np.clip(self.state[4]-self.vmax, 0, np.inf))**2
+                       - 10000*LA.norm(np.clip(self.vmin-self.state[4], 0, np.inf))**2)
+        reward = np.array([reward1, reward2, reward3, reward4, reward5])
         # state-transition dynamics
         for i in range(len(self.injection_bus)):
             self.network.sgen.at[i+1, 'q_mvar'] = action[i] 
