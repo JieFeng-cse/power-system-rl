@@ -56,31 +56,31 @@ class Monotone_Actor(nn.Module):
             self.w_recover[i,i+1] = -1.0
         self.b_recover = torch.triu(torch.ones([hidden_size, hidden_size], dtype=torch.float32))\
             -torch.eye(hidden_size)
-        self.w_plus_tmp = torch.rand(num_inputs, hidden_size)
+        self.w_plus_tmp = 5*torch.rand(num_inputs, hidden_size)
         self.w_plus_tmp = nn.Parameter(self.w_plus_tmp)
-        self.b_plus_tmp = torch.rand(num_inputs, hidden_size)
+        self.b_plus_tmp = 5*torch.rand(num_inputs, hidden_size)
         self.b_plus_tmp = nn.Parameter(self.b_plus_tmp)
 
-        self.w_minus_tmp = torch.rand(num_inputs, hidden_size)
+        self.w_minus_tmp = 5*torch.rand(num_inputs, hidden_size)
         self.w_minus_tmp = nn.Parameter(self.w_plus_tmp)
-        self.b_minus_tmp = torch.rand(num_inputs, hidden_size)
+        self.b_minus_tmp = 5*torch.rand(num_inputs, hidden_size)
         self.b_minus_tmp = nn.Parameter(self.b_plus_tmp)
         self.one_m = torch.ones(num_inputs, hidden_size)
 
     def forward(self, inputs):
         x = inputs
-        # w_plus_tmp = torch.square(self.w_plus_tmp)
-        # b_plus_tmp = torch.square(self.b_plus_tmp)
-        # w_minus_tmp = torch.square(self.w_minus_tmp)
-        # b_minus_tmp = torch.square(self.b_minus_tmp)
+        w_plus_tmp = torch.abs(self.w_plus_tmp)
+        b_plus_tmp = torch.abs(self.b_plus_tmp)
+        w_minus_tmp = torch.abs(self.w_minus_tmp)
+        b_minus_tmp = torch.abs(self.b_minus_tmp)
 
-        w_plus = torch.matmul(self.w_plus_tmp, self.w_recover)
-        b_plus = torch.matmul(-self.b_plus_tmp, self.b_recover)
+        w_plus = torch.matmul(w_plus_tmp, self.w_recover)
+        b_plus = torch.matmul(-b_plus_tmp, self.b_recover)
 
-        w_minus = torch.matmul(-self.w_minus_tmp, self.w_recover)
-        b_minus = torch.matmul(-self.b_minus_tmp, self.b_recover)
-        nonlinear_plus = torch.sum(F.relu(torch.matmul(x-1.05, self.one_m) + b_plus)*w_plus, dim=-1)
-        nonlinear_minus = torch.sum(F.relu(-torch.matmul(x-0.95, self.one_m) + b_minus)*w_minus, dim=-1)
+        w_minus = torch.matmul(-w_minus_tmp, self.w_recover)
+        b_minus = torch.matmul(-b_minus_tmp, self.b_recover)
+        nonlinear_plus = torch.sum(F.relu(torch.matmul(x-1.0, self.one_m) + b_plus)*w_plus, dim=-1)
+        nonlinear_minus = torch.sum(F.relu(-torch.matmul(x-1.0, self.one_m) + b_minus)*w_minus, dim=-1)
         # print(inputs, nonlinear_plus, nonlinear_minus)
         action = -(nonlinear_minus + nonlinear_plus).unsqueeze(-1)
         action[(inputs<1.05) * (inputs>0.95)] = 0.0
@@ -101,11 +101,11 @@ class Actor(nn.Module):
         self.ln2 = nn.LayerNorm(hidden_size)
 
         self.mu = nn.Linear(hidden_size, num_outputs)
-        self.mu.weight.data.mul_(0.1)
-        self.mu.bias.data.mul_(0.1)
+        # self.mu.weight.data.mul_(0.1)
+        # self.mu.bias.data.mul_(0.1)
 
     def forward(self, inputs):
-        x = inputs
+        x = inputs - 1.0
         x = self.linear1(x)
         x = self.ln1(x)
         x = F.relu(x)
@@ -113,6 +113,8 @@ class Actor(nn.Module):
         x = self.ln2(x)
         x = F.relu(x)
         mu = self.mu(x)
+        mu = torch.tanh(mu) * 2.0
+        assert mu.shape == inputs.shape, "shape mismatch"
         return mu
 
 class Critic(nn.Module):
@@ -132,7 +134,7 @@ class Critic(nn.Module):
         self.V.bias.data.mul_(0.1)
 
     def forward(self, inputs, actions):
-        x = inputs
+        x = inputs - 1.0
         x = self.linear1(x)
         x = self.ln1(x)
         x = F.relu(x)
@@ -148,10 +150,16 @@ class DDPG(object):
 
         self.num_inputs = num_inputs
         self.action_space = action_space
-
-        self.actor = Monotone_Actor(hidden_size, self.num_inputs, self.action_space)
-        self.actor_target = Monotone_Actor(hidden_size, self.num_inputs, self.action_space)
-        self.actor_perturbed = Monotone_Actor(hidden_size, self.num_inputs, self.action_space)
+        monotone = False
+        self.max_action = 2.5
+        if monotone:
+            self.actor = Monotone_Actor(hidden_size, self.num_inputs, self.action_space)
+            self.actor_target = Monotone_Actor(hidden_size, self.num_inputs, self.action_space)
+            self.actor_perturbed = Monotone_Actor(hidden_size, self.num_inputs, self.action_space)
+        else:
+            self.actor = Actor(hidden_size, self.num_inputs, self.action_space)
+            self.actor_target = Actor(hidden_size, self.num_inputs, self.action_space)
+            self.actor_perturbed = Actor(hidden_size, self.num_inputs, self.action_space)
         self.actor_optim = Adam(self.actor.parameters(), lr=1e-4)
 
         self.critic = Critic(hidden_size, self.num_inputs, self.action_space)
@@ -178,7 +186,9 @@ class DDPG(object):
 
         if action_noise is not None:
             mu += torch.Tensor(action_noise.noise())
-
+        # print(mu[0])
+        mu = self.max_action-F.relu(self.max_action-mu) + F.relu(-self.max_action - mu)        
+        mu[(state<1.05) * (state>0.95)] = 0.0
         return mu
 
 

@@ -56,16 +56,16 @@ class VoltageCtrl_nonlinear(gym.Env):
         
         done = False 
         
-        reward1 = float(-10*LA.norm(action[0])**2 -10000*LA.norm(np.clip(self.state[0]-self.vmax, 0, np.inf))**2
-                       - 10000*LA.norm(np.clip(self.vmin-self.state[0], 0, np.inf))**2)
-        reward2 = float(-10*LA.norm(action[1])**2 -10000*LA.norm(np.clip(self.state[1]-self.vmax, 0, np.inf))**2
-                       - 10000*LA.norm(np.clip(self.vmin-self.state[1], 0, np.inf))**2)
-        reward3 = float(-10*LA.norm(action[2])**2 -10000*LA.norm(np.clip(self.state[2]-self.vmax, 0, np.inf))**2
-                       - 10000*LA.norm(np.clip(self.vmin-self.state[2], 0, np.inf))**2)
-        reward4 = float(-10*LA.norm(action[3])**2 -10000*LA.norm(np.clip(self.state[3]-self.vmax, 0, np.inf))**2
-                       - 10000*LA.norm(np.clip(self.vmin-self.state[3], 0, np.inf))**2)
-        reward5 = float(-10*LA.norm(action[4])**2 -10000*LA.norm(np.clip(self.state[4]-self.vmax, 0, np.inf))**2
-                       - 10000*LA.norm(np.clip(self.vmin-self.state[4], 0, np.inf))**2)
+        reward1 = float(-2*50*LA.norm(action)**2 -100*LA.norm(np.clip(self.state-self.vmax, 0, np.inf))**2
+                       - 100*LA.norm(np.clip(self.vmin-self.state, 0, np.inf))**2)
+        reward2 = float(-2*50*LA.norm(action)**2 -100*LA.norm(np.clip(self.state-self.vmax, 0, np.inf))**2
+                       - 100*LA.norm(np.clip(self.vmin-self.state, 0, np.inf))**2)
+        reward3 = float(-2*50*LA.norm(action)**2 -100*LA.norm(np.clip(self.state-self.vmax, 0, np.inf))**2
+                       - 100*LA.norm(np.clip(self.vmin-self.state, 0, np.inf))**2)
+        reward4 = float(-2*50*LA.norm(action)**2 -100*LA.norm(np.clip(self.state-self.vmax, 0, np.inf))**2
+                       - 100*LA.norm(np.clip(self.vmin-self.state, 0, np.inf))**2)
+        reward5 = float(-2*50*LA.norm(action)**2 -100*LA.norm(np.clip(self.state-self.vmax, 0, np.inf))**2
+                       - 100*LA.norm(np.clip(self.vmin-self.state, 0, np.inf))**2)
         reward = np.array([reward1, reward2, reward3, reward4, reward5])
         # state-transition dynamics
         for i in range(len(self.injection_bus)):
@@ -81,8 +81,9 @@ class VoltageCtrl_nonlinear(gym.Env):
         return self.state, reward, done, {None:None}
     
     def reset(self, seed=1):
-        np.random.seed(seed)
+        # np.random.seed(seed)
         senario = np.random.choice([0, 1])
+        # print(senario)
         if(senario == 0):#low voltage 
            # Low voltage
             self.network.sgen['p_mw'] = 0.0

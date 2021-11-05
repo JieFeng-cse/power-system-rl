@@ -21,4 +21,4 @@ class OUNoise:
         # dx = self.theta * (self.mu - x) + self.sigma * np.random.randn(len(x))
         # self.state = x + dx
         # return self.state * self.scale
-        return np.sqrt(0.05)*np.random.randn(len(x))
+        return self.scale*np.random.randn(len(x))

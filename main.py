@@ -33,13 +33,13 @@ parser.add_argument('--tau', type=float, default=0.01, metavar='G',
                     help='discount factor for model (default: 0.01)')
 parser.add_argument('--ou_noise', type=bool, default=True)
 parser.add_argument('--param_noise', type=bool, default=False)
-parser.add_argument('--noise_scale', type=float, default=0.2, metavar='G',
+parser.add_argument('--noise_scale', type=float, default=0.5, metavar='G',
                     help='initial noise scale (default: 0.3)')
-parser.add_argument('--final_noise_scale', type=float, default=0.1, metavar='G',
+parser.add_argument('--final_noise_scale', type=float, default=0.2, metavar='G',
                     help='final noise scale (default: 0.3)')
 parser.add_argument('--exploration_end', type=int, default=200, metavar='N',
                     help='number of episodes with noise (default: 100)')
-parser.add_argument('--seed', type=int, default=13, metavar='N',
+parser.add_argument('--seed', type=int, default=17, metavar='N',
                     help='random seed (default: 13)')
 parser.add_argument('--batch_size', type=int, default=256, metavar='N',
                     help='batch size (default: 128)')
@@ -94,7 +94,7 @@ for i_episode in range(args.num_episodes):
     state = torch.Tensor([env.reset()])
 
     if args.ou_noise: 
-        ounoise.scale = (args.noise_scale - args.final_noise_scale) * max(0.05, args.exploration_end -
+        ounoise.scale = (args.noise_scale - args.final_noise_scale) * max(0.0, args.exploration_end -
                                                                       i_episode) / args.exploration_end + args.final_noise_scale
         # ounoise.scale = args.noise_scale
         ounoise.reset()
@@ -120,7 +120,7 @@ for i_episode in range(args.num_episodes):
         log.append(torch.cat([state,action],dim=1).detach().cpu().numpy())
         next_state, reward, done, _ = env.step(action.numpy()[0])
         total_numsteps += 1
-        episode_reward += np.sum(reward)
+        episode_reward += np.mean(reward)
         episode_len += 1
 
         action = torch.Tensor(action)
@@ -165,7 +165,7 @@ for i_episode in range(args.num_episodes):
                 updates += 1
         if done or episode_len==30:
             log = np.vstack(log)
-            np.savetxt('train_log2.txt',log, fmt='%1.4e')
+            np.savetxt('train_log1.txt',log, fmt='%1.4e')
             break
 
     writer.add_scalar('reward/train', episode_reward, i_episode)
@@ -183,6 +183,9 @@ for i_episode in range(args.num_episodes):
     rewards.append(episode_reward)
     log = []
     if i_episode % 10 == 0:
+        if args.ou_noise: 
+            ounoise.scale = 0.0
+            ounoise.reset()
         state = torch.Tensor([env.reset()])
         episode_reward = 0
         test_len=0
@@ -202,24 +205,24 @@ for i_episode in range(args.num_episodes):
             test_len+=1
 
             next_state, reward, done, _ = env.step(action.numpy()[0])
-            episode_reward += np.sum(reward)
+            episode_reward += np.mean(reward)
 
             next_state = torch.Tensor([next_state])
 
             state = next_state
             if done or test_len==60:
                 log = np.vstack(log)
-                np.savetxt('test_log2.txt',log, fmt='%1.4e')
+                np.savetxt('test_log1.txt',log, fmt='%1.4e')
                 break
 
         writer.add_scalar('reward/test', episode_reward, i_episode)
-        if episode_reward > best_val_reward:
-            best_val_reward = episode_reward
-            model1_pth = './models/agent1.pt'
-            model2_pth = './models/agent2.pt'
-            model3_pth = './models/agent3.pt'
-            model4_pth = './models/agent4.pt'
-            model5_pth = './models/agent5.pt'
+        if episode_reward/test_len > best_val_reward:
+            best_val_reward = episode_reward/test_len
+            model1_pth = './models/dagent1.pt'
+            model2_pth = './models/dagent2.pt'
+            model3_pth = './models/dagent3.pt'
+            model4_pth = './models/dagent4.pt'
+            model5_pth = './models/dagent5.pt'
             torch.save(agent1,model1_pth)
             torch.save(agent2,model2_pth)
             torch.save(agent3,model3_pth)

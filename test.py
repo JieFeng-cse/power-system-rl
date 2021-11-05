@@ -84,12 +84,57 @@ total_numsteps = 0
 updates = 0
 best_val_reward = -100000
 
+# for i_episode in range(1):
+#     state = torch.Tensor([env.reset()])
+
+#     if args.ou_noise: 
+#         ounoise.scale = 0.0
+#         # ounoise.scale = args.noise_scale
+#         ounoise.reset()
+
+#     # if args.param_noise and args.algo == "DDPG":
+#     #     agent.perturb_actor_parameters(param_noise)
+
+#     episode_reward = 0
+#     episode_len = 0
+#     log = []
+#     while True: #state:[1,1]
+#         state1 = state[:,0].unsqueeze(-1)
+#         state2 = state[:,1].unsqueeze(-1)
+#         state3 = state[:,2].unsqueeze(-1)
+#         state4 = state[:,3].unsqueeze(-1)
+#         state5 = state[:,4].unsqueeze(-1)
+#         action1 = agent1.select_action(state1, ounoise, param_noise)
+#         action2 = agent2.select_action(state2, ounoise, param_noise)
+#         action3 = agent3.select_action(state3, ounoise, param_noise)
+#         action4 = agent4.select_action(state4, ounoise, param_noise)
+#         action5 = agent5.select_action(state5, ounoise, param_noise)
+#         action = torch.cat([action1, action2, action3, action4, action5], dim=1)
+#         log.append(torch.cat([state,action],dim=1).detach().cpu().numpy())
+#         next_state, reward, done, _ = env.step(action.numpy()[0])
+#         total_numsteps += 1
+#         episode_reward += np.mean(reward)
+#         episode_len += 1
+
+#         action = torch.Tensor(action)
+#         mask = torch.Tensor([not done])
+#         next_state = torch.Tensor([next_state])
+#         reward = torch.Tensor([reward])
+#         state = next_state
+#         if done or episode_len==60:
+#             log = np.vstack(log)
+#             np.savetxt('train_logtt.txt',log, fmt='%1.4e')
+#             break
+
+#     writer.add_scalar('reward/train', episode_reward, i_episode)    
+#     print("Episode: {}, total numsteps: {}, reward: {}".format(i_episode, total_numsteps, episode_reward))
+    
+# env.close()
 for i_episode in range(1):
-    state = torch.Tensor([env.reset()])
+    state = torch.linspace(0.8,1.2,60)
 
     if args.ou_noise: 
-        ounoise.scale = (0.0) * max(0.3, args.exploration_end -
-                                                                      i_episode) / args.exploration_end + args.final_noise_scale
+        ounoise.scale = 0.0
         # ounoise.scale = args.noise_scale
         ounoise.reset()
 
@@ -99,35 +144,21 @@ for i_episode in range(1):
     episode_reward = 0
     episode_len = 0
     log = []
-    while True: #state:[1,1]
-        state1 = state[:,0].unsqueeze(-1)
-        state2 = state[:,1].unsqueeze(-1)
-        state3 = state[:,2].unsqueeze(-1)
-        state4 = state[:,3].unsqueeze(-1)
-        state5 = state[:,4].unsqueeze(-1)
+    for i in range(60): #state:[1,1]
+        state1 = state[i].unsqueeze(-1).unsqueeze(-1)
+        state2 = state[i].unsqueeze(-1).unsqueeze(-1)
+        state3 = state[i].unsqueeze(-1).unsqueeze(-1)
+        state4 = state[i].unsqueeze(-1).unsqueeze(-1)
+        state5 = state[i].unsqueeze(-1).unsqueeze(-1)
         action1 = agent1.select_action(state1, ounoise, param_noise)
         action2 = agent2.select_action(state2, ounoise, param_noise)
         action3 = agent3.select_action(state3, ounoise, param_noise)
         action4 = agent4.select_action(state4, ounoise, param_noise)
         action5 = agent5.select_action(state5, ounoise, param_noise)
         action = torch.cat([action1, action2, action3, action4, action5], dim=1)
-        log.append(torch.cat([state,action],dim=1).detach().cpu().numpy())
-        next_state, reward, done, _ = env.step(action.numpy()[0])
-        total_numsteps += 1
-        episode_reward += np.sum(reward)
-        episode_len += 1
-
-        action = torch.Tensor(action)
-        mask = torch.Tensor([not done])
-        next_state = torch.Tensor([next_state])
-        reward = torch.Tensor([reward])
-        state = next_state
-        if done or episode_len==30:
-            log = np.vstack(log)
-            np.savetxt('train_logtt.txt',log, fmt='%1.4e')
-            break
-
-    writer.add_scalar('reward/train', episode_reward, i_episode)    
-    print("Episode: {}, total numsteps: {}, reward: {}, average reward: {}".format(i_episode, total_numsteps, rewards[-1], np.mean(rewards[-10:])))
-    
+        log.append(torch.cat([state[i].unsqueeze(-1).unsqueeze(-1),action],dim=1).detach().cpu().numpy())
+        
+    log = np.vstack(log)
+    np.savetxt('v-u.txt',log, fmt='%1.4e')
+    break
 env.close()
