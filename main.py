@@ -39,7 +39,7 @@ parser.add_argument('--final_noise_scale', type=float, default=0.2, metavar='G',
                     help='final noise scale (default: 0.3)')
 parser.add_argument('--exploration_end', type=int, default=200, metavar='N',
                     help='number of episodes with noise (default: 100)')
-parser.add_argument('--seed', type=int, default=17, metavar='N',
+parser.add_argument('--seed', type=int, default=43, metavar='N',
                     help='random seed (default: 13)')
 parser.add_argument('--batch_size', type=int, default=256, metavar='N',
                     help='batch size (default: 128)')
@@ -128,11 +128,11 @@ for i_episode in range(args.num_episodes):
         next_state = torch.Tensor([next_state])
         reward = torch.Tensor([reward])
 
-        memory1.push(state1, action1, mask, next_state[:,0].unsqueeze(-1), reward[:,0])
-        memory2.push(state2, action2, mask, next_state[:,1].unsqueeze(-1), reward[:,1])
-        memory3.push(state3, action3, mask, next_state[:,2].unsqueeze(-1), reward[:,2])
-        memory4.push(state4, action4, mask, next_state[:,3].unsqueeze(-1), reward[:,3])
-        memory5.push(state5, action5, mask, next_state[:,4].unsqueeze(-1), reward[:,4])
+        memory1.push(state1, action1, mask, next_state[:,0].unsqueeze(-1), reward)
+        memory2.push(state2, action2, mask, next_state[:,1].unsqueeze(-1), reward)
+        memory3.push(state3, action3, mask, next_state[:,2].unsqueeze(-1), reward)
+        memory4.push(state4, action4, mask, next_state[:,3].unsqueeze(-1), reward)
+        memory5.push(state5, action5, mask, next_state[:,4].unsqueeze(-1), reward)
 
         state = next_state
 
@@ -165,9 +165,13 @@ for i_episode in range(args.num_episodes):
                 updates += 1
         if done or episode_len==30:
             log = np.vstack(log)
-            np.savetxt('train_log1.txt',log, fmt='%1.4e')
+            np.savetxt('train_log1g.txt',log, fmt='%1.4e')
             break
-
+    # if i_episode %30 ==0:
+    #     for name, parms in agent2.actor.named_parameters(): 
+    #         if 'mu' in name:
+    #             print('-->name:', name, '-->grad_requirs:',parms.requires_grad, \
+    #             ' -->para_value:',parms.data)
     writer.add_scalar('reward/train', episode_reward, i_episode)
 
     # Update param_noise based on distance metric
@@ -212,22 +216,23 @@ for i_episode in range(args.num_episodes):
             state = next_state
             if done or test_len==60:
                 log = np.vstack(log)
-                np.savetxt('test_log1.txt',log, fmt='%1.4e')
+                np.savetxt('test_log1g.txt',log, fmt='%1.4e')
                 break
 
         writer.add_scalar('reward/test', episode_reward, i_episode)
-        if episode_reward/test_len > best_val_reward:
-            best_val_reward = episode_reward/test_len
-            model1_pth = './models/dagent1.pt'
-            model2_pth = './models/dagent2.pt'
-            model3_pth = './models/dagent3.pt'
-            model4_pth = './models/dagent4.pt'
-            model5_pth = './models/dagent5.pt'
-            torch.save(agent1,model1_pth)
-            torch.save(agent2,model2_pth)
-            torch.save(agent3,model3_pth)
-            torch.save(agent4,model4_pth)
-            torch.save(agent5,model5_pth)
+        # if episode_reward/test_len > best_val_reward and i_episode>50:
+        # best_val_reward = episode_reward/test_len
+        model1_pth = './models/gagent1.pt'
+        # model2_pth = './models/dagent2.pt'
+        # model3_pth = './models/dagent3.pt'
+        # model4_pth = './models/dagent4.pt'
+        # model5_pth = './models/dagent5.pt'
+        torch.save(agent1,model1_pth)
+        # torch.save(agent2,model2_pth)
+        # torch.save(agent3,model3_pth)
+        # torch.save(agent4,model4_pth)
+        # torch.save(agent5,model5_pth)
+        print("model saved")
 
 
         rewards.append(episode_reward)

@@ -51,25 +51,27 @@ class VoltageCtrl_nonlinear(gym.Env):
         self.gen0_q = np.copy(self.network.sgen['q_mvar'])
         
         self.state = np.ones(self.agentnum, )
+        self.last_action = 0.0
     
     def step(self, action):
         
         done = False 
-        
-        reward1 = float(-2*50*LA.norm(action)**2 -100*LA.norm(np.clip(self.state-self.vmax, 0, np.inf))**2
-                       - 100*LA.norm(np.clip(self.vmin-self.state, 0, np.inf))**2)
-        reward2 = float(-2*50*LA.norm(action)**2 -100*LA.norm(np.clip(self.state-self.vmax, 0, np.inf))**2
-                       - 100*LA.norm(np.clip(self.vmin-self.state, 0, np.inf))**2)
-        reward3 = float(-2*50*LA.norm(action)**2 -100*LA.norm(np.clip(self.state-self.vmax, 0, np.inf))**2
-                       - 100*LA.norm(np.clip(self.vmin-self.state, 0, np.inf))**2)
-        reward4 = float(-2*50*LA.norm(action)**2 -100*LA.norm(np.clip(self.state-self.vmax, 0, np.inf))**2
-                       - 100*LA.norm(np.clip(self.vmin-self.state, 0, np.inf))**2)
-        reward5 = float(-2*50*LA.norm(action)**2 -100*LA.norm(np.clip(self.state-self.vmax, 0, np.inf))**2
-                       - 100*LA.norm(np.clip(self.vmin-self.state, 0, np.inf))**2)
-        reward = np.array([reward1, reward2, reward3, reward4, reward5])
+        # action-transition dynamics                
+        reward = float(-10*LA.norm(action)**2 -100*LA.norm(np.clip(self.state-self.vmax, 0, np.inf))**2
+                       - 100*LA.norm(np.clip(self.vmin-self.state, 0, np.inf))**2)        
+        action = self.last_action + action
         # state-transition dynamics
         for i in range(len(self.injection_bus)):
             self.network.sgen.at[i+1, 'q_mvar'] = action[i] 
+        
+        if not self.network['Converged_in_100_r']:
+            print("Failed to converge in 100 rounds")
+            print(action)
+            reward -= 1000
+            self.network['Converged_in_100_r'] = True
+            done = True
+        
+        self.last_action = action
 
         pp.runpp(self.network, algorithm='bfsw', init = 'dc')
         
@@ -81,7 +83,9 @@ class VoltageCtrl_nonlinear(gym.Env):
         return self.state, reward, done, {None:None}
     
     def reset(self, seed=1):
+        seed = np.random.randint(0,200)
         # np.random.seed(seed)
+        self.last_action = 0.0
         senario = np.random.choice([0, 1])
         # print(senario)
         if(senario == 0):#low voltage 

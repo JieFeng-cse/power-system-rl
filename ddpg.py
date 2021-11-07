@@ -101,11 +101,11 @@ class Actor(nn.Module):
         self.ln2 = nn.LayerNorm(hidden_size)
 
         self.mu = nn.Linear(hidden_size, num_outputs)
-        # self.mu.weight.data.mul_(0.1)
-        # self.mu.bias.data.mul_(0.1)
+        self.mu.weight.data.mul_(0.01)
+        self.mu.bias.data.mul_(0.01)
 
     def forward(self, inputs):
-        x = inputs - 1.0
+        x = inputs
         x = self.linear1(x)
         x = self.ln1(x)
         x = F.relu(x)
@@ -113,7 +113,8 @@ class Actor(nn.Module):
         x = self.ln2(x)
         x = F.relu(x)
         mu = self.mu(x)
-        mu = torch.tanh(mu) * 2.0
+        # print(mu)
+        mu = torch.tanh(mu) * 0.3
         assert mu.shape == inputs.shape, "shape mismatch"
         return mu
 
@@ -134,7 +135,7 @@ class Critic(nn.Module):
         self.V.bias.data.mul_(0.1)
 
     def forward(self, inputs, actions):
-        x = inputs - 1.0
+        x = inputs
         x = self.linear1(x)
         x = self.ln1(x)
         x = F.relu(x)
@@ -151,16 +152,17 @@ class DDPG(object):
         self.num_inputs = num_inputs
         self.action_space = action_space
         monotone = False
-        self.max_action = 2.5
+        self.max_action = 0.3
         if monotone:
             self.actor = Monotone_Actor(hidden_size, self.num_inputs, self.action_space)
             self.actor_target = Monotone_Actor(hidden_size, self.num_inputs, self.action_space)
             self.actor_perturbed = Monotone_Actor(hidden_size, self.num_inputs, self.action_space)
+            self.actor_optim = Adam(self.actor.parameters(), lr=1e-4)
         else:
             self.actor = Actor(hidden_size, self.num_inputs, self.action_space)
             self.actor_target = Actor(hidden_size, self.num_inputs, self.action_space)
             self.actor_perturbed = Actor(hidden_size, self.num_inputs, self.action_space)
-        self.actor_optim = Adam(self.actor.parameters(), lr=1e-4)
+            self.actor_optim = Adam(self.actor.parameters(), lr=1e-5)
 
         self.critic = Critic(hidden_size, self.num_inputs, self.action_space)
         self.critic_target = Critic(hidden_size, self.num_inputs, self.action_space)
@@ -187,7 +189,8 @@ class DDPG(object):
         if action_noise is not None:
             mu += torch.Tensor(action_noise.noise())
         # print(mu[0])
-        mu = self.max_action-F.relu(self.max_action-mu) + F.relu(-self.max_action - mu)        
+        mu = self.max_action - F.relu(self.max_action-mu) + F.relu(-self.max_action - mu)   
+        mu += torch.Tensor(action_noise.noise())     
         mu[(state<1.05) * (state>0.95)] = 0.0
         return mu
 

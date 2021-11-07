@@ -64,16 +64,16 @@ env = VoltageCtrl_nonlinear(pp_net, injection_bus)
 torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 
-agent1 = torch.load('./models/agent1.pt')
+agent1 = torch.load('./models/dagent1.pt')
 agent1.actor.eval()
 agent1.actor_target.eval()
 agent1.critic.eval()
 agent1.critic_target.eval()
 
-agent2 = torch.load('./models/agent2.pt')
-agent3 = torch.load('./models/agent3.pt')
-agent4 = torch.load('./models/agent4.pt')                                      
-agent5 = torch.load('./models/agent5.pt')
+agent2 = torch.load('./models/dagent2.pt')
+agent3 = torch.load('./models/dagent3.pt')
+agent4 = torch.load('./models/dagent4.pt')                                      
+agent5 = torch.load('./models/dagent5.pt')
 
 ounoise = OUNoise(env.action_space.shape[0]) if args.ou_noise else None
 param_noise = AdaptiveParamNoiseSpec(initial_stddev=0.05, 
@@ -84,54 +84,8 @@ total_numsteps = 0
 updates = 0
 best_val_reward = -100000
 
-# for i_episode in range(1):
-#     state = torch.Tensor([env.reset()])
-
-#     if args.ou_noise: 
-#         ounoise.scale = 0.0
-#         # ounoise.scale = args.noise_scale
-#         ounoise.reset()
-
-#     # if args.param_noise and args.algo == "DDPG":
-#     #     agent.perturb_actor_parameters(param_noise)
-
-#     episode_reward = 0
-#     episode_len = 0
-#     log = []
-#     while True: #state:[1,1]
-#         state1 = state[:,0].unsqueeze(-1)
-#         state2 = state[:,1].unsqueeze(-1)
-#         state3 = state[:,2].unsqueeze(-1)
-#         state4 = state[:,3].unsqueeze(-1)
-#         state5 = state[:,4].unsqueeze(-1)
-#         action1 = agent1.select_action(state1, ounoise, param_noise)
-#         action2 = agent2.select_action(state2, ounoise, param_noise)
-#         action3 = agent3.select_action(state3, ounoise, param_noise)
-#         action4 = agent4.select_action(state4, ounoise, param_noise)
-#         action5 = agent5.select_action(state5, ounoise, param_noise)
-#         action = torch.cat([action1, action2, action3, action4, action5], dim=1)
-#         log.append(torch.cat([state,action],dim=1).detach().cpu().numpy())
-#         next_state, reward, done, _ = env.step(action.numpy()[0])
-#         total_numsteps += 1
-#         episode_reward += np.mean(reward)
-#         episode_len += 1
-
-#         action = torch.Tensor(action)
-#         mask = torch.Tensor([not done])
-#         next_state = torch.Tensor([next_state])
-#         reward = torch.Tensor([reward])
-#         state = next_state
-#         if done or episode_len==60:
-#             log = np.vstack(log)
-#             np.savetxt('train_logtt.txt',log, fmt='%1.4e')
-#             break
-
-#     writer.add_scalar('reward/train', episode_reward, i_episode)    
-#     print("Episode: {}, total numsteps: {}, reward: {}".format(i_episode, total_numsteps, episode_reward))
-    
-# env.close()
 for i_episode in range(1):
-    state = torch.linspace(0.8,1.2,60)
+    state = torch.Tensor([env.reset()])
 
     if args.ou_noise: 
         ounoise.scale = 0.0
@@ -144,21 +98,68 @@ for i_episode in range(1):
     episode_reward = 0
     episode_len = 0
     log = []
-    for i in range(60): #state:[1,1]
-        state1 = state[i].unsqueeze(-1).unsqueeze(-1)
-        state2 = state[i].unsqueeze(-1).unsqueeze(-1)
-        state3 = state[i].unsqueeze(-1).unsqueeze(-1)
-        state4 = state[i].unsqueeze(-1).unsqueeze(-1)
-        state5 = state[i].unsqueeze(-1).unsqueeze(-1)
+    while True: #state:[1,1]
+        state1 = state[:,0].unsqueeze(-1)
+        state2 = state[:,1].unsqueeze(-1)
+        state3 = state[:,2].unsqueeze(-1)
+        state4 = state[:,3].unsqueeze(-1)
+        state5 = state[:,4].unsqueeze(-1)
         action1 = agent1.select_action(state1, ounoise, param_noise)
         action2 = agent2.select_action(state2, ounoise, param_noise)
         action3 = agent3.select_action(state3, ounoise, param_noise)
         action4 = agent4.select_action(state4, ounoise, param_noise)
         action5 = agent5.select_action(state5, ounoise, param_noise)
         action = torch.cat([action1, action2, action3, action4, action5], dim=1)
-        log.append(torch.cat([state[i].unsqueeze(-1).unsqueeze(-1),action],dim=1).detach().cpu().numpy())
-        
-    log = np.vstack(log)
-    np.savetxt('v-u.txt',log, fmt='%1.4e')
-    break
+        log.append(torch.cat([state,action],dim=1).detach().cpu().numpy())
+        next_state, reward, done, _ = env.step(action.numpy()[0])
+        # print(action)
+        total_numsteps += 1
+        episode_reward += np.mean(reward)
+        episode_len += 1
+
+        action = torch.Tensor(action)
+        mask = torch.Tensor([not done])
+        next_state = torch.Tensor([next_state])
+        reward = torch.Tensor([reward])
+        state = next_state
+        if done or episode_len==60:
+            log = np.vstack(log)
+            np.savetxt('train_logttd.txt',log, fmt='%1.4e')
+            break
+
+    writer.add_scalar('reward/train', episode_reward, i_episode)    
+    print("Episode: {}, total numsteps: {}, reward: {}".format(i_episode, total_numsteps, episode_reward))
+    
 env.close()
+# for i_episode in range(1):
+#     state = torch.linspace(0.8,1.2,60)
+
+#     if args.ou_noise: 
+#         ounoise.scale = 0.0
+#         # ounoise.scale = args.noise_scale
+#         ounoise.reset()
+
+#     # if args.param_noise and args.algo == "DDPG":
+#     #     agent.perturb_actor_parameters(param_noise)
+
+#     episode_reward = 0
+#     episode_len = 0
+#     log = []
+#     for i in range(60): #state:[1,1]
+#         state1 = state[i].unsqueeze(-1).unsqueeze(-1)
+#         state2 = state[i].unsqueeze(-1).unsqueeze(-1)
+#         state3 = state[i].unsqueeze(-1).unsqueeze(-1)
+#         state4 = state[i].unsqueeze(-1).unsqueeze(-1)
+#         state5 = state[i].unsqueeze(-1).unsqueeze(-1)
+#         action1 = agent1.select_action(state1, ounoise, param_noise)
+#         action2 = agent2.select_action(state2, ounoise, param_noise)
+#         action3 = agent3.select_action(state3, ounoise, param_noise)
+#         action4 = agent4.select_action(state4, ounoise, param_noise)
+#         action5 = agent5.select_action(state5, ounoise, param_noise)
+#         action = torch.cat([action1, action2, action3, action4, action5], dim=1)
+#         log.append(torch.cat([state[i].unsqueeze(-1).unsqueeze(-1),action],dim=1).detach().cpu().numpy())
+        
+#     log = np.vstack(log)
+#     np.savetxt('v-u.txt',log, fmt='%1.4e')
+#     break
+# env.close()
